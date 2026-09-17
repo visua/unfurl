@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Unfurl</title>
+<meta name="description" content="Open Graph previews for Facebook, X, LinkedIn, WhatsApp, Discord, Slack and iOS Messages, exported as SVG for Figma.">
+<style>
+[hidden]{display:none!important}
+:root{
+  --bg:#FFFFFF;--ink:#111114;--muted:#8A8A93;--line:#E6E6EA;
+  --dock:#F2F2F4;--dock-ink:#8A8A93;--dock-on:#111114;--dock-on-ink:#FFFFFF;
+  --ok:#1F8A4C;--warn:#C77700;--bad:#D1242F;
+  --font:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141416;--ink:#F1F1F4;--muted:#8A8A93;--line:#2A2A30;
+    --dock:#232327;--dock-ink:#9A9AA5;--dock-on:#F1F1F4;--dock-on-ink:#141416;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141416;--ink:#F1F1F4;--muted:#8A8A93;--line:#2A2A30;
+  --dock:#232327;--dock-ink:#9A9AA5;--dock-on:#F1F1F4;--dock-on-ink:#141416;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;-webkit-font-smoothing:antialiased}
+.page{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:48px;padding:80px 16px 120px;position:relative}
+
+/* dock */
+.dock{display:flex;gap:8px}
+.dock button{width:40px;height:40px;border-radius:50%;border:0;background:var(--dock);color:var(--dock-ink);display:grid;place-items:center;cursor:pointer;padding:0;transition:transform .15s,background .15s}
+.dock button:hover{transform:translateY(-2px)}
+.dock button[aria-selected=true]{background:var(--dock-on);color:var(--dock-on-ink)}
+.dock button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.dock button svg{width:18px;height:18px;fill:currentColor}
+.dock button span{font-size:12px;font-weight:700;letter-spacing:.02em}
+
+/* preview */
+.stage{position:relative;max-width:100%}
+.stage svg:first-child{max-width:100%;height:auto;display:block}
+.stage g.ed{cursor:text}
+.stage g.ed rect.hit{fill:transparent;stroke:transparent;stroke-width:1;stroke-dasharray:3 2;rx:3}
+.stage g.ed:hover rect.hit{stroke:#8A8A93}
+.stage g.ed.on rect.hit{stroke:transparent}
+.stage g.img{cursor:pointer}
+.stage.over svg:first-child{outline:2px dashed var(--muted);outline-offset:8px;border-radius:8px}
+.editor{position:absolute;margin:0;padding:0;border:0;background:transparent;color:inherit;resize:none;overflow:hidden;white-space:pre-wrap;word-wrap:break-word;line-height:inherit;outline:none;box-shadow:0 0 0 1px var(--muted);border-radius:2px;caret-color:#E4002B}
+#f-img{display:none}
+
+/* corners */
+.corner{position:fixed;bottom:20px;display:flex;gap:4px;align-items:center;font-size:12px}
+.corner.l{left:20px}.corner.r{right:20px}
+.corner button{font:inherit;font-size:12px;font-weight:600;color:var(--muted);background:none;border:0;padding:6px 8px;border-radius:6px;cursor:pointer}
+.corner button:hover{color:var(--ink);background:var(--dock)}
+.corner button:focus-visible{outline:2px solid var(--ink)}
+.corner .sep{color:var(--line)}
+.bug{display:flex;align-items:center;gap:6px}
+.bug .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.bug .dot.warn{background:var(--warn)}.bug .dot.bad{background:var(--bad)}
+.panel{position:fixed;right:20px;bottom:56px;width:300px;max-width:calc(100% - 40px);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 0;box-shadow:0 8px 30px rgba(0,0,0,.12);font-size:13px}
+.panel ul{margin:0;padding:0}
+.panel li{list-style:none;display:grid;grid-template-columns:8px 1fr auto;gap:10px;align-items:center;padding:7px 14px}
+.panel li i{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.panel li.warn i{background:var(--warn)}.panel li.bad i{background:var(--bad)}
+.panel li code{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.panel li small{display:block;color:var(--muted);font-size:12px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:13px;padding:8px 14px;border-radius:6px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){.toast,.dock button{transition:none}}
+/* url import */
+.url{display:flex;align-items:center;gap:8px;width:min(420px,100%)}
+.url input{flex:1;font:inherit;font-size:13px;color:var(--ink);background:none;border:0;border-bottom:1px solid var(--line);padding:8px 2px;outline:none;text-align:center}
+.url input::placeholder{color:var(--muted)}
+.url input:focus{border-bottom-color:var(--ink)}
+.url .spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--ink);border-radius:50%;animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.stage.busy{opacity:.4;pointer-events:none;transition:opacity .2s}
+.err{position:fixed;top:20px;left:50%;transform:translateX(-50%);font-size:13px;color:var(--bad);background:var(--bg);border:1px solid var(--line);padding:8px 14px;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="dock" id="dock" aria-label="Platform"></nav>
+  <div class="stage" id="stage"><div id="svgwrap"></div></div>
+  <form class="url" id="urlform" autocomplete="off">
+    <input type="url" id="f-url" placeholder="Paste a URL to pull its Open Graph tags" aria-label="URL" spellcheck="false">
+    <span class="spin" id="spin" hidden></span>
+  </form>
+  <input type="file" id="f-img" accept="image/*">
+</div>
+<div class="err" id="err" hidden></div>
+<div class="corner l">
+  <button id="copy">Copy SVG</button><span class="sep">·</span>
+  <button id="dl">Download</button><span class="sep">·</span>
+  <button id="dlall">All seven</button>
+</div>
+<div class="corner r">
+  <button class="bug" id="bug" aria-expanded="false"><span class="dot" id="bugdot"></span><span id="bugtext">Checks</span></button>
+</div>
+<div class="panel" id="panel" hidden><ul id="checks"></ul></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/all.min.js"></script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const state = {
+  title: 'Novia.Studio · Portfolio of Designer and Creative Director Michael Novia',
+  desc: 'Designer and creative director with twenty years across startups, large technology companies, and design agencies. Based in Bend, Oregon.',
+  site: 'Novia.Studio', domain: 'novia.studio', img: null, imgW: 1200, imgH: 630
+};
+let current = 'x';
+
+/* ---------- text helpers ---------- */
+const meas = document.createElement('canvas').getContext('2d');
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function wrap(text, font, maxW, maxLines) {
+  meas.font = font;
+  const words = String(text).trim().split(/\s+/).filter(Boolean);
+  const lines = []; let line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (meas.measureText(test).width <= maxW || !line) line = test;
+    else { lines.push(line); line = w; }
+  }
+  if (line) lines.push(line);
+  if (!lines.length) lines.push(' ');
+  if (lines.length > maxLines) {
+    lines.length = maxLines;
+    let last = lines[maxLines - 1];
+    while (meas.measureText(last + '…').width > maxW && last.length) last = last.slice(0, -1).replace(/\s+$/, '');
+    lines[maxLines - 1] = last + '…';
+  }
+  return lines;
+}
+const ellip = (text, font, maxW) => wrap(text, font, maxW, 1)[0] || '';
+// field: which state key this text edits (null = static)
+function T(lines, x, y, size, lh, fill, weight, family, field, extra='') {
+  return `<text x="${x}" y="${y}" font-family="${family}" font-size="${size}" font-weight="${weight}" fill="${fill}" ${field?`data-edit="${field}"`:''} ${extra}>` +
+    lines.map((l,i) => `<tspan x="${x}" dy="${i? lh : 0}">${esc(l)}</tspan>`).join('') + `</text>`;
+}
+let clipN = 0;
+function image(x, y, w, h, r, fb) {
+  const id = 'c' + (clipN++);
+  const clip = `<clipPath id="${id}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}"/></clipPath>`;
+  if (state.img) return clip + `<image data-img="1" clip-path="url(#${id})" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" href="${state.img}"/>`;
+  const pid = 'p' + id;
+  return clip + `<pattern id="${pid}" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="${fb[0]}"/><rect width="5" height="10" fill="${fb[1]}"/></pattern><rect data-img="1" clip-path="url(#${id})" x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#${pid})"/>`;
+}
+const svgWrap = (w, h, body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${body}</svg>`;
+
+/* ---------- platforms ---------- */
+const SYS = "-apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif";
+const P = {};
+
+P.facebook = { name:'Facebook', icon:'fa-brands fa-facebook-f', render(s){
+  const W=500, imgH=261, F="Helvetica, Arial, sans-serif";
+  const title = wrap(s.title, `700 16px Helvetica`, W-32, 2);
+  const desc = title.length < 2 ? [ellip(s.desc, `400 14px Helvetica`, W-32)] : [];
+  const footH = 12 + 15 + 8 + title.length*20 + (desc.length? 20:0) + 12;
+  const H = imgH + footH;
+  let b = `<rect x=".5" y=".5" width="${W-1}" height="${H-1}" rx="8" fill="#F0F2F5" stroke="#CED0D4"/>`;
+  b += image(1,1,W-2,imgH,0,['#E4E6EB','#DDDFE4']);
+  b += `<path d="M1 ${imgH} H${W-1}" stroke="#CED0D4"/>`;
+  let y = imgH + 23;
+  b += T([ellip(s.domain.toUpperCase(), `400 12px Helvetica`, W-32)], 16, y, 12, 15, '#65676B', 400, F, 'domain', 'letter-spacing=".2"');
+  y += 24;
+  b += T(title, 16, y, 16, 20, '#050505', 700, F, 'title');
+  y += (title.length-1)*20 + 20;
+  if (desc.length) b += T(desc, 16, y, 14, 18, '#65676B', 400, F, 'desc');
+  return {w:W, h:H, svg: svgWrap(W,H,b)};
+}};
+
+P.x = { name:'X', icon:'fa-brands fa-x-twitter', render(s){
+  const W=516, imgH=270, F=SYS;
+  const H = imgH + 28;
+  const pill = ellip(s.title, `400 13px Helvetica`, W-60);
+  meas.font = `400 13px Helvetica`; const pw = Math.min(W-24, meas.measureText(pill).width + 16);
+  let b = `<clipPath id="xr"><rect x=".5" y=".5" width="${W-1}" height="${imgH-1}" rx="16"/></clipPath>`;
+  b += `<g clip-path="url(#xr)">` + image(0,0,W,imgH,0,['#E7E9EA','#DDE0E2']) + `</g>`;
+  b += `<rect x=".5" y=".5" width="${W-1}" height="${imgH-1}" rx="16" fill="none" stroke="#CFD9DE"/>`;
+  b += `<rect x="12" y="${imgH-34}" width="${pw}" height="22" rx="4" fill="#000" fill-opacity=".77"/>`;
+  b += T([pill], 20, imgH-19, 13, 16, '#FFF', 400, F, 'title');
+  b += T([`From ${s.domain}`], 0, imgH+22, 15, 18, '#536471', 400, F, 'domain');
+  return {w:W, h:H, svg: svgWrap(W,H,b)};
+}};
+
+P.linkedin = { name:'LinkedIn', icon:'fa-brands fa-linkedin-in', render(s){
+  const W=552, imgH=289, F=SYS;
+  const title = wrap(s.title, `600 14px Helvetica`, W-32, 2);
+  const H = imgH + 12 + title.length*20 + 4 + 16 + 12;
+  let b = `<rect width="${W}" height="${H}" rx="8" fill="#EEF3F8"/>`;
+  b += `<clipPath id="lr"><rect width="${W}" height="${imgH+8}" rx="8"/></clipPath><g clip-path="url(#lr)">` + image(0,0,W,imgH,0,['#E1E9EE','#D6DFE5']) + `</g>`;
+  let y = imgH + 26;
+  b += T(title, 16, y, 14, 20, 'rgba(0,0,0,.9)', 600, F, 'title');
+  y += (title.length-1)*20 + 20;
+  b += T([ellip(s.domain, `400 12px Helvetica`, W-32)], 16, y, 12, 16, 'rgba(0,0,0,.6)', 400, F, 'domain');
+  return {w:W, h:H, svg: svgWrap(W,H,b)};
+}};
+
+P.whatsapp = { name:'WhatsApp', icon:'fa-brands fa-whatsapp', render(s){
+  const W=336, F=SYS, pad=6, inner=W-pad*2, imgH=Math.round(inner*0.66);
+  const title = wrap(s.title, `500 13.5px Helvetica`, inner-20, 2);
+  const desc = wrap(s.desc, `400 13px Helvetica`, inner-20, 2);
+  const url = ellip(`https://${s.domain}`, `400 14.2px Helvetica`, inner-16);
+  const cardH = imgH + 8 + title.length*18 + 4 + desc.length*17 + 4 + 16 + 10;
+  const H = pad + cardH + 8 + 20 + 22 + pad;
+  let b = `<path d="M0 8 Q0 0 8 0 H${W-8} Q${W} 0 ${W} 8 V${H-8} Q${W} ${H} ${W-8} ${H} H8 Q0 ${H} 0 ${H-8} Z" fill="#D9FDD3"/>`;
+  b += `<path d="M${W} 0 L${W+8} 0 Q${W+2} 4 ${W} 10 Z" fill="#D9FDD3"/>`;
+  b += `<rect x="${pad}" y="${pad}" width="${inner}" height="${cardH}" rx="8" fill="#D1F4CC"/>`;
+  b += `<clipPath id="wr"><rect x="${pad}" y="${pad}" width="${inner}" height="${imgH+8}" rx="8"/></clipPath><g clip-path="url(#wr)">` + image(pad,pad,inner,imgH,0,['#C5EBC0','#BCE4B7']) + `</g>`;
+  let y = pad + imgH + 21;
+  b += T(title, pad+10, y, 13.5, 18, '#111B21', 500, F, 'title');
+  y += (title.length-1)*18 + 19;
+  b += T(desc, pad+10, y, 13, 17, '#667781', 400, F, 'desc');
+  y += (desc.length-1)*17 + 18;
+  b += T([s.domain], pad+10, y, 12, 16, '#8696A0', 400, F, 'domain');
+  y = pad + cardH + 23;
+  b += T([url], pad+2, y, 14.2, 18, '#027EB5', 400, F, null, 'text-decoration="underline"');
+  b += T(['9:41 AM'], W-pad-74, H-pad-4, 11, 14, '#667781', 400, F, null);
+  b += `<path transform="translate(${W-pad-24},${H-pad-15})" d="M1 6 l3 3 l5-6 M6 6 l3 3 l5-6" fill="none" stroke="#53BDEB" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+  return {w:W+8, h:H, svg: svgWrap(W+8,H,b)};
+}};
+
+P.discord = { name:'Discord', icon:'fa-brands fa-discord', render(s){
+  const W=432, F="'gg sans', 'Noto Sans', Helvetica, Arial, sans-serif", cx=16;
+  const title = wrap(s.title, `600 16px Helvetica`, W-cx-16, 2);
+  const desc = wrap(s.desc, `400 14px Helvetica`, W-cx-16, 3);
+  const imgW = W-cx-16, imgH = Math.round(imgW*0.5233);
+  const H = 36 + title.length*22 + 8 + desc.length*18 + 16 + imgH + 16;
+  let b = `<rect width="${W}" height="${H}" rx="4" fill="#2B2D31"/>`;
+  b += `<path d="M0 4 Q0 0 4 0 V${H} Q0 ${H} 0 ${H-4} Z" fill="#E4002B"/><rect width="4" height="${H}" fill="#E4002B"/>`;
+  let y = 24;
+  b += T([ellip(s.site, `400 12px Helvetica`, W-cx-16)], cx, y, 12, 16, '#DBDEE1', 400, F, 'site');
+  y += 24;
+  b += T(title, cx, y, 16, 22, '#00A8FC', 600, F, 'title');
+  y += (title.length-1)*22 + 22;
+  b += T(desc, cx, y, 14, 18, '#DBDEE1', 400, F, 'desc');
+  y += (desc.length-1)*18 + 16;
+  b += image(cx, y, imgW, imgH, 4, ['#3A3C42','#34363C']);
+  return {w:W, h:H, svg: svgWrap(W,H,b)};
+}};
+
+P.slack = { name:'Slack', icon:'fa-brands fa-slack', render(s){
+  const W=560, F="Lato, 'Helvetica Neue', Helvetica, Arial, sans-serif";
+  const ax=16, tx=ax+44, bw=W-tx;
+  const url = ellip(`https://${s.domain}`, `400 15px Helvetica`, bw);
+  const ux = tx+16, uw = 360;
+  const title = wrap(s.title, `700 15px Helvetica`, uw, 2);
+  const desc = wrap(s.desc, `400 15px Helvetica`, uw, 3);
+  const imgW=uw, imgH=Math.round(uw*0.5233);
+  const unfH = 28 + title.length*22 + 4 + desc.length*22 + 10 + imgH + 6;
+  const H = 68 + unfH + 12;
+  const initial = (s.site||'N').trim()[0] || 'N';
+  let b = `<rect width="${W}" height="${H}" fill="#FFFFFF"/>`;
+  b += `<rect x="${ax}" y="12" width="36" height="36" rx="6" fill="#E4002B"/><text x="${ax+18}" y="36" text-anchor="middle" font-family="${F}" font-size="16" font-weight="900" fill="#fff">${esc(initial.toUpperCase())}</text>`;
+  b += T([s.site||'You'], tx, 28, 15, 18, '#1D1C1D', 900, F, 'site');
+  meas.font='900 15px Helvetica'; const nw = meas.measureText(s.site||'You').width;
+  b += T(['9:41 AM'], tx+nw+8, 28, 12, 14, '#616061', 400, F, null);
+  b += T([url], tx, 50, 15, 22, '#1264A3', 400, F, 'domain');
+  const uy = 64;
+  b += `<rect x="${tx}" y="${uy}" width="4" height="${unfH}" rx="2" fill="#DDDDDD"/>`;
+  let y = uy + 19;
+  b += `<rect x="${ux}" y="${y-12}" width="16" height="16" rx="3" fill="#E4002B"/>`;
+  b += T([ellip(s.site, `700 15px Helvetica`, uw-24)], ux+22, y, 15, 16, '#1D1C1D', 700, F, 'site');
+  y += 28;
+  b += T(title, ux, y, 15, 22, '#1264A3', 700, F, 'title');
+  y += (title.length-1)*22 + 26;
+  b += T(desc, ux, y, 15, 22, '#1D1C1D', 400, F, 'desc');
+  y += (desc.length-1)*22 + 10;
+  b += image(ux, y, imgW, imgH, 8, ['#EBEBEB','#E2E2E2']);
+  b += `<rect x="${ux+.5}" y="${y+.5}" width="${imgW-1}" height="${imgH-1}" rx="8" fill="none" stroke="#000" stroke-opacity=".1" pointer-events="none"/>`;
+  return {w:W, h:H, svg: svgWrap(W,H,b)};
+}};
+
+P.imessage = { name:'Messages', icon:'fa-solid fa-message', render(s){
+  const W=280, F="-apple-system, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+  const imgH = Math.round(W*0.5233);
+  const title = wrap(s.title, `600 15px Helvetica`, W-28, 2);
+  const dom = ellip(s.domain, `400 13px Helvetica`, W-28);
+  const H = imgH + 10 + title.length*19 + 4 + 16 + 10;
+  const r=18;
+  let b = `<clipPath id="ir"><path d="M${r} 0 H${W-r} Q${W} 0 ${W} ${r} V${H-r} Q${W} ${H} ${W-r} ${H} H${r} Q0 ${H} 0 ${H-r} V${r} Q0 0 ${r} 0 Z"/></clipPath>`;
+  b += `<g clip-path="url(#ir)"><rect width="${W}" height="${H}" fill="#1982FC"/>` + image(0,0,W,imgH,0,['#6FAFFF','#63A6FF']) + `</g>`;
+  b += `<path d="M${W-6} ${H-16} C${W-4} ${H-8} ${W+2} ${H-3} ${W+8} ${H-1} C${W+2} ${H} ${W-6} ${H-2} ${W-11} ${H-7} Z" fill="#1982FC"/>`;
+  let y = imgH + 24;
+  b += T(title, 14, y, 15, 19, '#FFFFFF', 600, F, 'title');
+  y += (title.length-1)*19 + 18;
+  b += T([dom], 14, y, 13, 16, '#FFFFFF', 400, F, 'domain', 'fill-opacity=".7"');
+  return {w:W+8, h:H, svg: svgWrap(W+8,H,b)};
+}};
+
+const ORDER = ['facebook','x','linkedin','whatsapp','discord','slack','imessage'];
+const NS = 'http://www.w3.org/2000/svg';
+
+/* ---------- render + inline editing ---------- */
+const stage = $('stage'), wrapEl = $('svgwrap');
+let editing = null; // {field, ta}
+
+function render() {
+  clipN = 0;
+  wrapEl.innerHTML = P[current].render(state).svg;
+  const svg = wrapEl.firstElementChild;
+  // wrap editable text in a hit group
+  svg.querySelectorAll('text[data-edit]').forEach(t => {
+    const bb = t.getBBox();
+    const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'ed'); g.dataset.edit = t.dataset.edit;
+    const r = document.createElementNS(NS, 'rect'); r.setAttribute('class', 'hit');
+    r.setAttribute('x', bb.x-4); r.setAttribute('y', bb.y-3); r.setAttribute('width', bb.width+8); r.setAttribute('height', bb.height+6);
+    t.parentNode.insertBefore(g, t); g.appendChild(r); g.appendChild(t);
+    if (editing && editing.field === t.dataset.edit) g.classList.add('on');
+    g.addEventListener('mousedown', e => { e.preventDefault(); openEditor(t.dataset.edit, t); });
+  });
+  svg.querySelectorAll('[data-img]').forEach(el => {
+    const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'img');
+    el.parentNode.insertBefore(g, el); g.appendChild(el);
+    g.addEventListener('click', () => $('f-img').click());
+    g.insertAdjacentHTML('beforeend', `<title>Click to replace image</title>`);
+  });
+  if (editing) placeEditor();
+  checks();
+}
+
+function openEditor(field, textEl) {
+  if (editing && editing.field === field) return;
+  closeEditor();
+  const ta = document.createElement('textarea');
+  ta.className = 'editor'; ta.id = 'ed-' + field; ta.value = state[field]; ta.rows = 1;
+  ta.setAttribute('aria-label', field);
+  stage.appendChild(ta);
+  editing = {field, ta};
+  ta.addEventListener('input', () => {
+    state[field] = field === 'domain' ? ta.value.replace(/^https?:\/\//,'').replace(/\/.*$/,'') : ta.value;
+    render();
+  });
+  ta.addEventListener('keydown', e => { if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Escape') { e.preventDefault(); closeEditor(); } });
+  ta.addEventListener('blur', closeEditor);
+  render();
+  ta.focus(); ta.select();
+}
+function placeEditor() {
+  const {field, ta} = editing;
+  const t = wrapEl.querySelector(`text[data-edit="${field}"]`);
+  if (!t) return closeEditor();
+  const svg = wrapEl.firstElementChild;
+  const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
+  const sb = stage.getBoundingClientRect(), bb = t.getBoundingClientRect();
+  const size = parseFloat(t.getAttribute('font-size')) * scale;
+  const lh = (t.querySelectorAll('tspan')[1]?.getAttribute('dy') || size*1.25) * scale;
+  const fill = t.getAttribute('fill');
+  const dark = /#FFF|#DBDEE1|#00A8FC/i.test(fill);
+  Object.assign(ta.style, {
+    left: (bb.left - sb.left - 4) + 'px', top: (bb.top - sb.top - 3) + 'px',
+    width: Math.max(bb.width + 8, 160*scale) + 'px',
+    fontFamily: t.getAttribute('font-family'), fontSize: size + 'px', fontWeight: t.getAttribute('font-weight'),
+    lineHeight: lh + 'px', padding: '3px 4px', color: fill.startsWith('rgba') ? '#111' : fill,
+    background: dark ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.85)'
+  });
+  ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px';
+}
+function closeEditor() {
+  if (!editing) return;
+  const ta = editing.ta; editing = null; ta.remove(); render();
+}
+window.addEventListener('resize', () => editing && placeEditor());
+
+/* ---------- image in ---------- */
+function loadFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const rd = new FileReader();
+  rd.onload = () => { const im = new Image(); im.onload = () => { state.img = rd.result; state.imgW = im.naturalWidth; state.imgH = im.naturalHeight; render(); }; im.src = rd.result; };
+  rd.readAsDataURL(file);
+}
+$('f-img').addEventListener('change', e => { loadFile(e.target.files[0]); e.target.value = ''; });
+['dragenter','dragover'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); stage.classList.add('over'); }));
+['dragleave','drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); stage.classList.remove('over'); }));
+document.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+document.addEventListener('paste', e => {
+  if (editing) return;
+  const f = [...(e.clipboardData?.items||[])].find(i => i.type.startsWith('image/'));
+  if (f) loadFile(f.getAsFile());
+});
+
+/* ---------- url import ---------- */
+let errT;
+function showErr(msg) { const e = $('err'); e.textContent = msg; e.hidden = false; clearTimeout(errT); errT = setTimeout(() => e.hidden = true, 4000); }
+async function importUrl(raw) {
+  const url = raw.trim(); if (!url) return;
+  $('f-url').value = url; $('spin').hidden = false; stage.classList.add('busy'); closeEditor();
+  try {
+    const r = await fetch('/api/unfurl?url=' + encodeURIComponent(url));
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Import failed');
+    state.title = d.title || ''; state.desc = d.description || ''; state.site = d.siteName || ''; state.domain = d.domain || '';
+    if (d.image) {
+      await new Promise(res => { const im = new Image(); im.onload = () => { state.img = d.image; state.imgW = im.naturalWidth; state.imgH = im.naturalHeight; res(); }; im.onerror = res; im.src = d.image; });
+    } else { state.img = null; if (d.imageError) showErr(d.imageError + '. Drop one in by hand.'); }
+    if (!d.title && !d.description) showErr('No Open Graph tags found on that page.');
+    try { history.replaceState(null, '', '?url=' + encodeURIComponent(d.url || url)); } catch {}
+  } catch (e) { showErr(e.message); }
+  $('spin').hidden = true; stage.classList.remove('busy'); render();
+}
+$('urlform').addEventListener('submit', e => { e.preventDefault(); importUrl($('f-url').value); $('f-url').blur(); });
+$('f-url').addEventListener('paste', e => { const t = e.clipboardData?.getData('text') || ''; if (/^\s*(https?:\/\/)?[\w.-]+\.[a-z]{2,}/i.test(t)) { e.preventDefault(); importUrl(t); } });
+document.addEventListener('paste', e => {
+  if (editing || e.target === $('f-url')) return;
+  const t = e.clipboardData?.getData('text') || '';
+  if (/^\s*https?:\/\/\S+$/i.test(t)) { e.preventDefault(); importUrl(t); }
+});
+
+/* ---------- dock ---------- */
+const dock = $('dock');
+ORDER.forEach(k => {
+  const b = document.createElement('button');
+  b.dataset.k = k; b.title = P[k].name; b.setAttribute('aria-label', P[k].name); b.setAttribute('aria-selected', k === current);
+  b.innerHTML = window.FontAwesome ? `<i class="${P[k].icon}"></i>` : `<span>${P[k].name.slice(0,2)}</span>`;
+  b.addEventListener('click', () => { closeEditor(); current = k; [...dock.children].forEach(t => t.setAttribute('aria-selected', t.dataset.k === k)); render(); });
+  dock.appendChild(b);
+});
+document.addEventListener('keydown', e => {
+  if (editing || e.metaKey || e.ctrlKey) return;
+  const i = ORDER.indexOf(current);
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') dock.children[(i + (e.key === 'ArrowRight' ? 1 : ORDER.length-1)) % ORDER.length].click();
+});
+
+/* ---------- checks ---------- */
+function checks() {
+  const items = [];
+  const add = (lvl, tag, text, sub) => items.push({lvl, tag, text, sub});
+  if (!state.img) add('bad','og:image','No image','Click the image area, drop or paste one.');
+  else if (state.imgW < 1200 || state.imgH < 630) add('warn','og:image',`${state.imgW}×${state.imgH}`,'1200×630 or larger avoids upscaling.');
+  else add('ok','og:image',`${state.imgW}×${state.imgH}`);
+  const ratio = state.imgW/state.imgH;
+  if (state.img && Math.abs(ratio-1.91) > 0.15) add('warn','og:image',`Ratio ${ratio.toFixed(2)}:1`,'1.91:1 crops cleanly everywhere.');
+  if (!state.title.trim()) add('bad','og:title','Missing');
+  else if (state.title.length > 60) add('warn','og:title',`${state.title.length} characters`,'Over 60 gets clipped on X and LinkedIn.');
+  else add('ok','og:title',`${state.title.length} characters`);
+  if (!state.desc.trim()) add('warn','og:description','Missing');
+  else if (state.desc.length > 125) add('warn','og:description',`${state.desc.length} characters`,'Over ~125 truncates on mobile.');
+  else add('ok','og:description',`${state.desc.length} characters`);
+  if (!state.site.trim()) add('warn','og:site_name','Missing','Discord and Slack show it as the source.');
+  if (!state.domain.trim()) add('bad','og:url','Missing domain');
+  const worst = items.some(i=>i.lvl==='bad') ? 'bad' : items.some(i=>i.lvl==='warn') ? 'warn' : 'ok';
+  const n = items.filter(i=>i.lvl!=='ok').length;
+  $('bugdot').className = 'dot ' + (worst==='ok'?'':worst);
+  $('bugtext').textContent = n ? `${n} ${n===1?'note':'notes'}` : 'All good';
+  $('checks').innerHTML = items.map(i => `<li class="${i.lvl}"><i></i><span>${esc(i.text)}${i.sub?`<small>${esc(i.sub)}</small>`:''}</span><code>${i.tag}</code></li>`).join('');
+}
+$('bug').addEventListener('click', () => { const p = $('panel'); p.hidden = !p.hidden; $('bug').setAttribute('aria-expanded', !p.hidden); });
+document.addEventListener('click', e => { if (!e.target.closest('#bug,#panel')) { $('panel').hidden = true; $('bug').setAttribute('aria-expanded','false'); } });
+
+/* ---------- export ---------- */
+let toastT;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1800); }
+const slug = () => (state.domain || 'preview').replace(/[^a-z0-9.-]/gi,'');
+const XML = '<?xml version="1.0" encoding="UTF-8"?>\n';
+const clean = svg => svg.replace(/ data-edit="[a-z]+"/g,'').replace(/ data-img="1"/g,'');
+function one() { clipN = 0; return clean(P[current].render(state).svg); }
+function all() {
+  clipN = 0;
+  const gap = 48, labelH = 22; let parts = [], y = 0, maxW = 0;
+  for (const k of ORDER) {
+    const o = P[k].render(state);
+    const inner = clean(o.svg).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+    parts.push(`<text x="0" y="${y+14}" font-family="${SYS}" font-size="12" font-weight="600" fill="#8A8A93" letter-spacing=".6">${P[k].name.toUpperCase()}</text><g transform="translate(0,${y+labelH})">${inner}</g>`);
+    y += labelH + o.h + gap; maxW = Math.max(maxW, o.w);
+  }
+  return svgWrap(maxW, y - gap, parts.join(''));
+}
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(XML + one()); toast('Copied. Paste into Figma.'); }
+  catch { toast('Clipboard blocked. Use Download.'); }
+});
+async function save(name, data) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data], {type:'image/svg+xml'})); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+$('dl').addEventListener('click', () => save(`${slug()}-${current}.svg`, XML + one()));
+$('dlall').addEventListener('click', () => save(`${slug()}-all.svg`, XML + all()));
+
+render();
+const q = new URLSearchParams(location.search).get('url');
+if (q) importUrl(q);
+})();
+</script>
+</body>
+</html>

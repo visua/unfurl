@@ -1,0 +1,8 @@
+{
+  "name": "unfurl",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Open Graph previews for Facebook, X, LinkedIn, WhatsApp, Discord, Slack and iOS Messages, exported as SVG for Figma.",
+  "scripts": { "dev": "netlify dev" },
+  "dependencies": { "@netlify/functions": "^2.8.0" }
+}
