@@ -9,7 +9,7 @@
 [hidden]{display:none!important}
 :root{
   --bg:#FFFFFF;--ink:#111114;--muted:#8A8A93;--line:#E6E6EA;
-  --dock:#F2F2F4;--dock-ink:#8A8A93;--dock-on:#111114;--dock-on-ink:#FFFFFF;
+  --dock:#F2F2F4;--dot-ink:#C2C2C8;
   --ok:#1F8A4C;--warn:#C77700;--bad:#D1242F;
   --font:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
@@ -17,36 +17,45 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#141416;--ink:#F1F1F4;--muted:#8A8A93;--line:#2A2A30;
-    --dock:#232327;--dock-ink:#9A9AA5;--dock-on:#F1F1F4;--dock-on-ink:#141416;
+    --dock:#232327;--dot-ink:#4A4A52;
   }
 }
 :root[data-theme="dark"]{
   --bg:#141416;--ink:#F1F1F4;--muted:#8A8A93;--line:#2A2A30;
-  --dock:#232327;--dock-ink:#9A9AA5;--dock-on:#F1F1F4;--dock-on-ink:#141416;
+  --dock:#232327;--dot-ink:#4A4A52;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;-webkit-font-smoothing:antialiased}
-.page{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:48px;padding:80px 16px 120px;position:relative}
+.page{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:48px;padding:64px 0 120px;position:relative;overflow:hidden}
 
-/* dock */
-.dock{display:flex;gap:8px}
-.dock button{width:40px;height:40px;border-radius:50%;border:0;background:var(--dock);color:var(--dock-ink);display:grid;place-items:center;cursor:pointer;padding:0;transition:transform .15s,background .15s}
-.dock button:hover{transform:translateY(-2px)}
-.dock button[aria-selected=true]{background:var(--dock-on);color:var(--dock-on-ink)}
-.dock button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
-.dock button svg{width:18px;height:18px;fill:currentColor}
-.dock button span{font-size:12px;font-weight:700;letter-spacing:.02em}
+/* dots */
+.dots{display:flex;gap:9px}
+.dots button{width:39px;height:39px;border-radius:50%;border:0;padding:0;background:transparent;color:var(--dot-ink);display:grid;place-items:center;cursor:pointer;transition:color .2s,transform .15s}
+.dots button svg{width:17px;height:17px;fill:currentColor}
+.dots button span{font-size:12px;font-weight:700;letter-spacing:.02em}
+.dots button:hover{color:var(--muted);transform:translateY(-2px)}
+.dots button[aria-current=true]{color:var(--ink)}
+.dots button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 
-/* preview */
-.stage{position:relative;max-width:100%}
-.stage svg:first-child{max-width:100%;height:auto;display:block}
-.stage g.ed{cursor:text}
-.stage g.ed rect.hit{fill:transparent;stroke:transparent;stroke-width:1;stroke-dasharray:3 2;rx:3}
-.stage g.ed:hover rect.hit{stroke:#8A8A93}
-.stage g.ed.on rect.hit{stroke:transparent}
-.stage g.img{cursor:pointer}
-.stage.over svg:first-child{outline:2px dashed var(--muted);outline-offset:8px;border-radius:8px}
+/* carousel: Embla (transform-based, looped, centered); .rail is the viewport, .track the container */
+.carousel{position:relative;width:100%;--gap:clamp(48px,13.6vw,191px)}
+.rail{position:relative;overflow:hidden;cursor:grab}
+.rail.drag{cursor:grabbing}
+.rail.drag *{user-select:none;-webkit-user-select:none}
+/* each slide carries its own gap as padding and the container pulls back by one gap: Embla's loop math and centering both rely on this */
+.track{display:flex;align-items:center;margin-left:calc(-1 * var(--gap));padding:24px 0;touch-action:pan-y pinch-zoom;backface-visibility:hidden;transition:opacity .2s}
+.track.busy{opacity:.4;pointer-events:none}
+.slide{position:relative;flex:0 0 auto;min-width:0;padding-left:var(--gap);transform:translate3d(0,0,0)}
+.slide svg:first-child{display:block;max-width:calc(100vw - 32px);height:auto}
+.slide g.ed{cursor:text}
+.slide g.ed rect.hit{fill:transparent;stroke:transparent;stroke-width:1;stroke-dasharray:3 2;rx:3}
+.slide g.ed:hover rect.hit{stroke:#8A8A93}
+.slide g.ed.on rect.hit{stroke:transparent}
+.slide g.img{cursor:pointer}
+.fade{position:absolute;top:0;bottom:0;left:0;width:45px;opacity:.5;pointer-events:none;background:linear-gradient(to right,var(--bg),transparent)}
+.fade.r{left:auto;right:0;background:linear-gradient(to left,var(--bg),transparent)}
+.rail.over{outline:2px dashed var(--muted);outline-offset:-8px;border-radius:8px}
 .editor{position:absolute;margin:0;padding:0;border:0;background:transparent;color:inherit;resize:none;overflow:hidden;white-space:pre-wrap;word-wrap:break-word;line-height:inherit;outline:none;box-shadow:0 0 0 1px var(--muted);border-radius:2px;caret-color:#E4002B}
 #f-img{display:none}
 
@@ -69,22 +78,24 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font
 .panel li small{display:block;color:var(--muted);font-size:12px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:13px;padding:8px 14px;border-radius:6px;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
-@media (prefers-reduced-motion:reduce){.toast,.dock button{transition:none}}
+@media (prefers-reduced-motion:reduce){.toast,.dots button,.track{transition:none}}
 /* url import */
-.url{display:flex;align-items:center;gap:8px;width:min(420px,100%)}
+.url{display:flex;align-items:center;gap:8px;width:min(420px,calc(100% - 32px))}
 .url input{flex:1;font:inherit;font-size:13px;color:var(--ink);background:none;border:0;border-bottom:1px solid var(--line);padding:8px 2px;outline:none;text-align:center}
 .url input::placeholder{color:var(--muted)}
 .url input:focus{border-bottom-color:var(--ink)}
 .url .spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--ink);border-radius:50%;animation:spin .8s linear infinite;flex:none}
 @keyframes spin{to{transform:rotate(360deg)}}
-.stage.busy{opacity:.4;pointer-events:none;transition:opacity .2s}
 .err{position:fixed;top:20px;left:50%;transform:translateX(-50%);font-size:13px;color:var(--bad);background:var(--bg);border:1px solid var(--line);padding:8px 14px;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
 </style>
 </head>
 <body>
 <div class="page">
-  <nav class="dock" id="dock" aria-label="Platform"></nav>
-  <div class="stage" id="stage"><div id="svgwrap"></div></div>
+  <div class="carousel">
+    <div class="rail" id="rail"><div class="track" id="track"></div></div>
+    <div class="fade l"></div><div class="fade r"></div>
+  </div>
+  <nav class="dots" id="dots" aria-label="Platform"></nav>
   <form class="url" id="urlform" autocomplete="off">
     <input type="url" id="f-url" placeholder="Paste a URL to pull its Open Graph tags" aria-label="URL" spellcheck="false">
     <span class="spin" id="spin" hidden></span>
@@ -104,6 +115,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/embla-carousel@8.6.0/embla-carousel.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/embla-carousel-wheel-gestures@8.1.0/dist/embla-carousel-wheel-gestures.umd.js"></script>
 <script>
 (() => {
 const $ = id => document.getElementById(id);
@@ -143,10 +156,11 @@ function T(lines, x, y, size, lh, fill, weight, family, field, extra='') {
     lines.map((l,i) => `<tspan x="${x}" dy="${i? lh : 0}">${esc(l)}</tspan>`).join('') + `</text>`;
 }
 let clipN = 0;
+let imgHref = null; // what image() embeds: a short blob: URL on screen (all seven cards re-render per keystroke), the data URI in exports
 function image(x, y, w, h, r, fb) {
   const id = 'c' + (clipN++);
   const clip = `<clipPath id="${id}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}"/></clipPath>`;
-  if (state.img) return clip + `<image data-img="1" clip-path="url(#${id})" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" href="${state.img}"/>`;
+  if (imgHref) return clip + `<image data-img="1" clip-path="url(#${id})" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" href="${imgHref}"/>`;
   const pid = 'p' + id;
   return clip + `<pattern id="${pid}" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="${fb[0]}"/><rect width="5" height="10" fill="${fb[1]}"/></pattern><rect data-img="1" clip-path="url(#${id})" x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#${pid})"/>`;
 }
@@ -297,13 +311,29 @@ const ORDER = ['facebook','x','linkedin','whatsapp','discord','slack','imessage'
 const NS = 'http://www.w3.org/2000/svg';
 
 /* ---------- render + inline editing ---------- */
-const stage = $('stage'), wrapEl = $('svgwrap');
-let editing = null; // {field, ta}
+const rail = $('rail'), track = $('track');
+const slides = ORDER.map((k, i) => {
+  const s = document.createElement('div');
+  s.className = 'slide'; s.dataset.k = k;
+  s.innerHTML = '<div class="svgwrap"></div>';
+  // a click on a side card centers it instead of editing it (Embla itself swallows the click that ends a drag)
+  s.addEventListener('click', e => { if (i !== embla.selectedScrollSnap()) { e.stopPropagation(); embla.scrollTo(i); } }, true);
+  track.appendChild(s);
+  return s;
+});
+let editing = null; // {field, el, ta}
 
 function render() {
-  clipN = 0;
-  wrapEl.innerHTML = P[current].render(state).svg;
-  const svg = wrapEl.firstElementChild;
+  clipN = 0; imgHref = state.imgUrl || state.img;
+  ORDER.forEach((k, i) => {
+    const wrap = slides[i].firstElementChild;
+    wrap.innerHTML = P[k].render(state).svg;
+    decorate(wrap.firstElementChild);
+  });
+  if (editing) placeEditor();
+  checks();
+}
+function decorate(svg) {
   // wrap editable text in a hit group
   svg.querySelectorAll('text[data-edit]').forEach(t => {
     const bb = t.getBBox();
@@ -311,8 +341,9 @@ function render() {
     const r = document.createElementNS(NS, 'rect'); r.setAttribute('class', 'hit');
     r.setAttribute('x', bb.x-4); r.setAttribute('y', bb.y-3); r.setAttribute('width', bb.width+8); r.setAttribute('height', bb.height+6);
     t.parentNode.insertBefore(g, t); g.appendChild(r); g.appendChild(t);
-    if (editing && editing.field === t.dataset.edit) g.classList.add('on');
-    g.addEventListener('mousedown', e => { e.preventDefault(); openEditor(t.dataset.edit, t); });
+    if (editing && editing.field === t.dataset.edit && svg.closest('.slide') === editing.el) g.classList.add('on');
+    g.addEventListener('mousedown', e => e.preventDefault()); // keep an open editor focused; the click below decides
+    g.addEventListener('click', () => openEditor(t.dataset.edit, t));
   });
   svg.querySelectorAll('[data-img]').forEach(el => {
     const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'img');
@@ -320,8 +351,6 @@ function render() {
     g.addEventListener('click', () => $('f-img').click());
     g.insertAdjacentHTML('beforeend', `<title>Click to replace image</title>`);
   });
-  if (editing) placeEditor();
-  checks();
 }
 
 function openEditor(field, textEl) {
@@ -330,8 +359,9 @@ function openEditor(field, textEl) {
   const ta = document.createElement('textarea');
   ta.className = 'editor'; ta.id = 'ed-' + field; ta.value = state[field]; ta.rows = 1;
   ta.setAttribute('aria-label', field);
-  stage.appendChild(ta);
-  editing = {field, ta};
+  const el = textEl.closest('.slide');
+  el.appendChild(ta);
+  editing = {field, el, ta};
   ta.addEventListener('input', () => {
     state[field] = field === 'domain' ? ta.value.replace(/^https?:\/\//,'').replace(/\/.*$/,'') : ta.value;
     render();
@@ -342,12 +372,12 @@ function openEditor(field, textEl) {
   ta.focus(); ta.select();
 }
 function placeEditor() {
-  const {field, ta} = editing;
-  const t = wrapEl.querySelector(`text[data-edit="${field}"]`);
+  const {field, el, ta} = editing;
+  const t = el.querySelector(`text[data-edit="${field}"]`);
   if (!t) return closeEditor();
-  const svg = wrapEl.firstElementChild;
+  const svg = el.querySelector('svg');
   const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
-  const sb = stage.getBoundingClientRect(), bb = t.getBoundingClientRect();
+  const sb = el.getBoundingClientRect(), bb = t.getBoundingClientRect();
   const size = parseFloat(t.getAttribute('font-size')) * scale;
   const lh = (t.querySelectorAll('tspan')[1]?.getAttribute('dy') || size*1.25) * scale;
   const fill = t.getAttribute('fill');
@@ -368,15 +398,19 @@ function closeEditor() {
 window.addEventListener('resize', () => editing && placeEditor());
 
 /* ---------- image in ---------- */
+function setImgUrl(blob) {
+  if (state.imgUrl) URL.revokeObjectURL(state.imgUrl);
+  state.imgUrl = blob ? URL.createObjectURL(blob) : null;
+}
 function loadFile(file) {
   if (!file || !file.type.startsWith('image/')) return;
   const rd = new FileReader();
-  rd.onload = () => { const im = new Image(); im.onload = () => { state.img = rd.result; state.imgW = im.naturalWidth; state.imgH = im.naturalHeight; render(); }; im.src = rd.result; };
+  rd.onload = () => { const im = new Image(); im.onload = () => { state.img = rd.result; state.imgW = im.naturalWidth; state.imgH = im.naturalHeight; setImgUrl(file); render(); }; im.src = rd.result; };
   rd.readAsDataURL(file);
 }
 $('f-img').addEventListener('change', e => { loadFile(e.target.files[0]); e.target.value = ''; });
-['dragenter','dragover'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); stage.classList.add('over'); }));
-['dragleave','drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); stage.classList.remove('over'); }));
+['dragenter','dragover'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); rail.classList.add('over'); }));
+['dragleave','drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); rail.classList.remove('over'); }));
 document.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
 document.addEventListener('paste', e => {
   if (editing) return;
@@ -389,7 +423,7 @@ let errT;
 function showErr(msg) { const e = $('err'); e.textContent = msg; e.hidden = false; clearTimeout(errT); errT = setTimeout(() => e.hidden = true, 4000); }
 async function importUrl(raw) {
   const url = raw.trim(); if (!url) return;
-  $('f-url').value = url; $('spin').hidden = false; stage.classList.add('busy'); closeEditor();
+  $('f-url').value = url; $('spin').hidden = false; track.classList.add('busy'); closeEditor();
   try {
     const r = await fetch('/api/unfurl?url=' + encodeURIComponent(url));
     const d = await r.json();
@@ -397,11 +431,12 @@ async function importUrl(raw) {
     state.title = d.title || ''; state.desc = d.description || ''; state.site = d.siteName || ''; state.domain = d.domain || '';
     if (d.image) {
       await new Promise(res => { const im = new Image(); im.onload = () => { state.img = d.image; state.imgW = im.naturalWidth; state.imgH = im.naturalHeight; res(); }; im.onerror = res; im.src = d.image; });
-    } else { state.img = null; if (d.imageError) showErr(d.imageError + '. Drop one in by hand.'); }
+      setImgUrl(await (await fetch(d.image)).blob());
+    } else { state.img = null; setImgUrl(null); if (d.imageError) showErr(d.imageError + '. Drop one in by hand.'); }
     if (!d.title && !d.description) showErr('No Open Graph tags found on that page.');
     try { history.replaceState(null, '', '?url=' + encodeURIComponent(d.url || url)); } catch {}
   } catch (e) { showErr(e.message); }
-  $('spin').hidden = true; stage.classList.remove('busy'); render();
+  $('spin').hidden = true; track.classList.remove('busy'); render();
 }
 $('urlform').addEventListener('submit', e => { e.preventDefault(); importUrl($('f-url').value); $('f-url').blur(); });
 $('f-url').addEventListener('paste', e => { const t = e.clipboardData?.getData('text') || ''; if (/^\s*(https?:\/\/)?[\w.-]+\.[a-z]{2,}/i.test(t)) { e.preventDefault(); importUrl(t); } });
@@ -411,19 +446,53 @@ document.addEventListener('paste', e => {
   if (/^\s*https?:\/\/\S+$/i.test(t)) { e.preventDefault(); importUrl(t); }
 });
 
-/* ---------- dock ---------- */
-const dock = $('dock');
-ORDER.forEach(k => {
+/* ---------- carousel ---------- */
+const dots = $('dots');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+const widths = new WeakMap();
+let embla;
+function mount() { // after the first render, so Embla measures real slide widths
+  embla = EmblaCarousel(rail, {
+    // duration is Embla's spring pull, not a time: ~40 matches Flickity's default attraction; lower is snappier and stiffer
+    loop: true, align: 'center', startIndex: ORDER.indexOf(current), duration: 40, dragThreshold: 6,
+    // slides change height on every keystroke; only a width change (viewport resize) needs Embla to re-measure
+    watchResize: (api, entries) => {
+      const changed = entries.some(e => { const w = Math.round(e.contentRect.width), prev = widths.get(e.target); widths.set(e.target, w); return prev !== undefined && prev !== w; });
+      if (changed) api.reInit();
+    }
+  }, window.EmblaCarouselWheelGestures ? [EmblaCarouselWheelGestures({ forceWheelAxis: 'x' })] : []);
+  embla.on('select', () => setCurrent(embla.selectedScrollSnap()));
+  embla.on('pointerDown', () => rail.classList.add('drag'));
+  embla.on('pointerUp', () => rail.classList.remove('drag'));
+}
+
+ORDER.forEach((k, i) => {
   const b = document.createElement('button');
-  b.dataset.k = k; b.title = P[k].name; b.setAttribute('aria-label', P[k].name); b.setAttribute('aria-selected', k === current);
+  b.dataset.k = k; b.title = P[k].name; b.setAttribute('aria-label', P[k].name); b.setAttribute('aria-current', k === current);
   b.innerHTML = window.FontAwesome ? `<i class="${P[k].icon}"></i>` : `<span>${P[k].name.slice(0,2)}</span>`;
-  b.addEventListener('click', () => { closeEditor(); current = k; [...dock.children].forEach(t => t.setAttribute('aria-selected', t.dataset.k === k)); render(); });
-  dock.appendChild(b);
+  b.addEventListener('click', () => goTo(i));
+  dots.appendChild(b);
 });
+function setCurrent(i) {
+  if (ORDER[i] === current) return;
+  current = ORDER[i];
+  [...dots.children].forEach(b => b.setAttribute('aria-current', b.dataset.k === current));
+}
+// The dots read as a line: a dot left of the current one travels backward, right travels forward,
+// even when the loop would make the other way shorter.
+function goTo(i) {
+  const from = embla.selectedScrollSnap();
+  if (i === from) return;
+  const engine = embla.internalEngine();
+  if (reduce.matches) engine.scrollBody.useDuration(0); else engine.scrollBody.useBaseDuration();
+  engine.scrollTo.index(i, -Math.sign(i - from)); // Embla's direction is the sign of the translation: forward is negative
+}
+// Embla cancels the mousedown behind a drag, so a click on empty rail would not blur the editor on its own
+rail.addEventListener('pointerdown', e => { if (editing && !e.target.closest('.editor, g.ed')) closeEditor(); }, true);
 document.addEventListener('keydown', e => {
-  if (editing || e.metaKey || e.ctrlKey) return;
-  const i = ORDER.indexOf(current);
-  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') dock.children[(i + (e.key === 'ArrowRight' ? 1 : ORDER.length-1)) % ORDER.length].click();
+  if (editing || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input,textarea')) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); embla.scrollNext(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); embla.scrollPrev(); }
 });
 
 /* ---------- checks ---------- */
@@ -458,9 +527,9 @@ function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add
 const slug = () => (state.domain || 'preview').replace(/[^a-z0-9.-]/gi,'');
 const XML = '<?xml version="1.0" encoding="UTF-8"?>\n';
 const clean = svg => svg.replace(/ data-edit="[a-z]+"/g,'').replace(/ data-img="1"/g,'');
-function one() { clipN = 0; return clean(P[current].render(state).svg); }
+function one() { clipN = 0; imgHref = state.img; return clean(P[current].render(state).svg); }
 function all() {
-  clipN = 0;
+  clipN = 0; imgHref = state.img;
   const gap = 48, labelH = 22; let parts = [], y = 0, maxW = 0;
   for (const k of ORDER) {
     const o = P[k].render(state);
@@ -483,8 +552,8 @@ $('dl').addEventListener('click', () => save(`${slug()}-${current}.svg`, XML + o
 $('dlall').addEventListener('click', () => save(`${slug()}-all.svg`, XML + all()));
 
 render();
-const q = new URLSearchParams(location.search).get('url');
-if (q) importUrl(q);
+mount();
+importUrl(new URLSearchParams(location.search).get('url') || 'https://www.apple.com/ipad-pro/');
 })();
 </script>
 </body>
