@@ -2,6 +2,10 @@
 
 ## 2026-09-17
 
+- Removed the edge fade overlays entirely; side cards now run straight off the viewport.
+- Dot icons no longer lift on hover; hover and active are color-only.
+- URL field moved to the top of the page (absolute, centered, 24px from the top); the error message moved down so it cannot overlap it.
+
 - Previews now live in a looping, center-aligned carousel built on Embla Carousel 8.6 (MIT) with the wheel-gestures plugin, replacing the single-card stage and icon dock. Cards render at native size with a gap that scales with the viewport; 45px edge fades at 50% opacity.
 - Dot row under the cards uses the platform icons on transparent circles, active icon in ink. Dots travel linearly (a dot to the left animates backward) instead of taking the loop's shortest path, which felt wrong.
 - Spring feel tuned via Embla `duration: 40` (Flickity-equivalent attraction); mouse drag, trackpad swipe, mouse wheel, arrow keys and side-card clicks all animate to a card.

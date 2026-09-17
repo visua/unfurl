@@ -31,10 +31,10 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font
 
 /* dots */
 .dots{display:flex;gap:9px}
-.dots button{width:39px;height:39px;border-radius:50%;border:0;padding:0;background:transparent;color:var(--dot-ink);display:grid;place-items:center;cursor:pointer;transition:color .2s,transform .15s}
+.dots button{width:39px;height:39px;border-radius:50%;border:0;padding:0;background:transparent;color:var(--dot-ink);display:grid;place-items:center;cursor:pointer;transition:color .2s}
 .dots button svg{width:17px;height:17px;fill:currentColor}
 .dots button span{font-size:12px;font-weight:700;letter-spacing:.02em}
-.dots button:hover{color:var(--muted);transform:translateY(-2px)}
+.dots button:hover{color:var(--muted)}
 .dots button[aria-current=true]{color:var(--ink)}
 .dots button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 
@@ -53,8 +53,6 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font
 .slide g.ed:hover rect.hit{stroke:#8A8A93}
 .slide g.ed.on rect.hit{stroke:transparent}
 .slide g.img{cursor:pointer}
-.fade{position:absolute;top:0;bottom:0;left:0;width:45px;opacity:.5;pointer-events:none;background:linear-gradient(to right,var(--bg),transparent)}
-.fade.r{left:auto;right:0;background:linear-gradient(to left,var(--bg),transparent)}
 .rail.over{outline:2px dashed var(--muted);outline-offset:-8px;border-radius:8px}
 .editor{position:absolute;margin:0;padding:0;border:0;background:transparent;color:inherit;resize:none;overflow:hidden;white-space:pre-wrap;word-wrap:break-word;line-height:inherit;outline:none;box-shadow:0 0 0 1px var(--muted);border-radius:2px;caret-color:#E4002B}
 #f-img{display:none}
@@ -80,26 +78,25 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font
 .toast.show{opacity:1}
 @media (prefers-reduced-motion:reduce){.toast,.dots button,.track{transition:none}}
 /* url import */
-.url{display:flex;align-items:center;gap:8px;width:min(420px,calc(100% - 32px))}
+.url{position:absolute;top:24px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;width:min(420px,calc(100% - 32px))}
 .url input{flex:1;font:inherit;font-size:13px;color:var(--ink);background:none;border:0;border-bottom:1px solid var(--line);padding:8px 2px;outline:none;text-align:center}
 .url input::placeholder{color:var(--muted)}
 .url input:focus{border-bottom-color:var(--ink)}
 .url .spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--ink);border-radius:50%;animation:spin .8s linear infinite;flex:none}
 @keyframes spin{to{transform:rotate(360deg)}}
-.err{position:fixed;top:20px;left:50%;transform:translateX(-50%);font-size:13px;color:var(--bad);background:var(--bg);border:1px solid var(--line);padding:8px 14px;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.err{position:fixed;top:72px;left:50%;transform:translateX(-50%);font-size:13px;color:var(--bad);background:var(--bg);border:1px solid var(--line);padding:8px 14px;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
 </style>
 </head>
 <body>
 <div class="page">
-  <div class="carousel">
-    <div class="rail" id="rail"><div class="track" id="track"></div></div>
-    <div class="fade l"></div><div class="fade r"></div>
-  </div>
-  <nav class="dots" id="dots" aria-label="Platform"></nav>
   <form class="url" id="urlform" autocomplete="off">
     <input type="url" id="f-url" placeholder="Paste a URL to pull its Open Graph tags" aria-label="URL" spellcheck="false">
     <span class="spin" id="spin" hidden></span>
   </form>
+  <div class="carousel">
+    <div class="rail" id="rail"><div class="track" id="track"></div></div>
+  </div>
+  <nav class="dots" id="dots" aria-label="Platform"></nav>
   <input type="file" id="f-img" accept="image/*">
 </div>
 <div class="err" id="err" hidden></div>
