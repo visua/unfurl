@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Unfurl</title>
 <meta name="description" content="Open Graph previews for Facebook, X, LinkedIn, WhatsApp, Discord, Slack and iOS Messages, exported as SVG for Figma.">
 <style>
@@ -24,8 +24,9 @@
   --bg:#141416;--ink:#F1F1F4;--muted:#8A8A93;--line:#2A2A30;
   --dock:#232327;--dot-ink:#4A4A52;
 }
-*{box-sizing:border-box}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;-webkit-font-smoothing:antialiased}
 .page{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:48px;padding:64px 0 120px;position:relative;overflow:hidden}
 
@@ -40,11 +41,11 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font
 
 /* carousel: Embla (transform-based, looped, centered); .rail is the viewport, .track the container */
 .carousel{position:relative;width:100%;--gap:clamp(48px,13.6vw,191px)}
-.rail{position:relative;overflow:hidden;cursor:grab}
+.rail{position:relative;overflow:hidden;cursor:grab;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .rail.drag{cursor:grabbing}
 .rail.drag *{user-select:none;-webkit-user-select:none}
 /* each slide carries its own gap as padding and the container pulls back by one gap: Embla's loop math and centering both rely on this */
-.track{display:flex;align-items:center;margin-left:calc(-1 * var(--gap));padding:24px 0;touch-action:pan-y pinch-zoom;backface-visibility:hidden;transition:opacity .2s}
+.track{display:flex;align-items:center;margin-left:calc(-1 * var(--gap));padding:24px 0;touch-action:pan-y;backface-visibility:hidden;transition:opacity .2s}
 .track.busy{opacity:.4;pointer-events:none}
 .slide{position:relative;flex:0 0 auto;min-width:0;padding-left:var(--gap);transform:translate3d(0,0,0)}
 .slide svg:first-child{display:block;max-width:calc(100vw - 32px);height:auto}
@@ -82,6 +83,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font
 .url input{flex:1;font:inherit;font-size:13px;color:var(--ink);background:none;border:0;border-bottom:1px solid var(--line);padding:8px 2px;outline:none;text-align:center}
 .url input::placeholder{color:var(--muted)}
 .url input:focus{border-bottom-color:var(--ink)}
+@media (pointer:coarse){.url input{font-size:16px}}
 .url .spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--ink);border-radius:50%;animation:spin .8s linear infinite;flex:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 .err{position:fixed;top:72px;left:50%;transform:translateX(-50%);font-size:13px;color:var(--bad);background:var(--bg);border:1px solid var(--line);padding:8px 14px;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.08)}

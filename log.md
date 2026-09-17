@@ -2,6 +2,7 @@
 
 ## 2026-09-17
 
+- Phone touch fixes: pinch and double-tap zoom disabled, URL field 16px on touch devices so iOS does not zoom on focus, no long-press callouts or tap flash on the cards.
 - Removed the edge fade overlays entirely; side cards now run straight off the viewport.
 - Dot icons no longer lift on hover; hover and active are color-only.
 - URL field moved to the top of the page (absolute, centered, 24px from the top); the error message moved down so it cannot overlap it.
