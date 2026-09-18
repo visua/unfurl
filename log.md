@@ -2,6 +2,7 @@
 
 ## 2026-09-17
 
+- URL field accepts bare domains (e.g. `trumprx.gov`): plain text input with a URL keyboard instead of `type=url`, which made the browser reject anything without a scheme. The function already adds `https://`.
 - Phone touch fixes: pinch and double-tap zoom disabled, URL field 16px on touch devices so iOS does not zoom on focus, no long-press callouts or tap flash on the cards.
 - Removed the edge fade overlays entirely; side cards now run straight off the viewport.
 - Dot icons no longer lift on hover; hover and active are color-only.

@@ -91,8 +91,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font
 </head>
 <body>
 <div class="page">
-  <form class="url" id="urlform" autocomplete="off">
-    <input type="url" id="f-url" placeholder="Paste a URL to pull its Open Graph tags" aria-label="URL" spellcheck="false">
+  <form class="url" id="urlform" autocomplete="off" novalidate>
+    <input type="text" inputmode="url" id="f-url" placeholder="Paste a URL to pull its Open Graph tags" aria-label="URL" spellcheck="false" autocapitalize="off" autocorrect="off">
     <span class="spin" id="spin" hidden></span>
   </form>
   <div class="carousel">
