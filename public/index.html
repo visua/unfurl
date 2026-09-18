@@ -9,7 +9,7 @@
 [hidden]{display:none!important}
 :root{
   --bg:#FFFFFF;--ink:#111114;--muted:#8A8A93;--line:#E6E6EA;
-  --dock:#F2F2F4;--dot-ink:#C2C2C8;
+  --dock:#F2F2F4;--dot-ink:#C2C2C8;--pill:#FBFAFA;--pill-line:rgba(0,0,0,.1);--pill-icon:#929292;--ring:#3B82F6;
   --ok:#1F8A4C;--warn:#C77700;--bad:#D1242F;
   --font:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
@@ -17,12 +17,12 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#141416;--ink:#F1F1F4;--muted:#8A8A93;--line:#2A2A30;
-    --dock:#232327;--dot-ink:#4A4A52;
+    --dock:#232327;--dot-ink:#4A4A52;--pill:#1C1C1F;--pill-line:rgba(255,255,255,.1);--pill-icon:#7A7A82;
   }
 }
 :root[data-theme="dark"]{
   --bg:#141416;--ink:#F1F1F4;--muted:#8A8A93;--line:#2A2A30;
-  --dock:#232327;--dot-ink:#4A4A52;
+  --dock:#232327;--dot-ink:#4A4A52;--pill:#1C1C1F;--pill-line:rgba(255,255,255,.1);--pill-icon:#7A7A82;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
@@ -78,11 +78,14 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:13px;padding:8px 14px;border-radius:6px;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
 @media (prefers-reduced-motion:reduce){.toast,.dots button,.track{transition:none}}
-/* url import */
-.url{position:absolute;top:24px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;width:min(420px,calc(100% - 32px))}
-.url input{flex:1;font:inherit;font-size:13px;color:var(--ink);background:none;border:0;border-bottom:1px solid var(--line);padding:8px 2px;outline:none;text-align:center}
+/* url import: globe + url, hugs its content, 163×35 in the design */
+.url{position:absolute;top:53px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:8px 14px 8px 10px;max-width:calc(100% - 32px);color:var(--pill-icon);background:var(--pill);border:.5px solid var(--pill-line);border-radius:100px;cursor:text;transition:box-shadow .15s,color .15s}
+/* the ring is a shadow, not an outline or border, so the hairline never moves */
+.url:hover{box-shadow:0 0 0 2px color-mix(in srgb,var(--ring) 35%,transparent)}
+.url:focus-within{color:var(--ink);box-shadow:0 0 0 2px var(--ring)}
+.url .globe{width:18px;height:18px;flex:none;transition:color .15s}
+.url input{font:inherit;font-size:15px;line-height:18px;height:18px;color:var(--ink);background:none;border:0;padding:0;margin:0;outline:none;min-width:80px;max-width:100%;field-sizing:content}
 .url input::placeholder{color:var(--muted)}
-.url input:focus{border-bottom-color:var(--ink)}
 @media (pointer:coarse){.url input{font-size:16px}}
 .url .spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--ink);border-radius:50%;animation:spin .8s linear infinite;flex:none}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -92,7 +95,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font
 <body>
 <div class="page">
   <form class="url" id="urlform" autocomplete="off" novalidate>
-    <input type="text" inputmode="url" id="f-url" placeholder="Paste a URL to pull its Open Graph tags" aria-label="URL" spellcheck="false" autocapitalize="off" autocorrect="off">
+    <svg class="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    <input type="text" inputmode="url" id="f-url" placeholder="Paste a URL" aria-label="URL" spellcheck="false" autocapitalize="off" autocorrect="off">
     <span class="spin" id="spin" hidden></span>
   </form>
   <div class="carousel">
@@ -419,10 +423,25 @@ document.addEventListener('paste', e => {
 
 /* ---------- url import ---------- */
 let errT;
+const shortUrl = u => u.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, '');
+// width to content for browsers without field-sizing
+function fitUrl() {
+  const f = $('f-url');
+  if (CSS.supports && CSS.supports('field-sizing', 'content')) return;
+  meas.font = getComputedStyle(f).font;
+  f.style.width = Math.ceil(meas.measureText(f.value || f.placeholder).width + 2) + 'px';
+}
+$('f-url').addEventListener('input', fitUrl);
+// typing state: tapping clears the field and asks for a URL; leaving it empty brings the old one back
+let urlBefore = '';
+$('f-url').addEventListener('focus', () => { const f = $('f-url'); urlBefore = f.value; f.value = ''; f.placeholder = 'Enter a URL to pull'; fitUrl(); });
+$('f-url').addEventListener('blur', () => { const f = $('f-url'); if (!f.value.trim()) f.value = urlBefore; f.placeholder = 'Paste a URL'; fitUrl(); });
+$('f-url').addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); $('f-url').blur(); } });
+$('urlform').addEventListener('click', () => $('f-url').focus());
 function showErr(msg) { const e = $('err'); e.textContent = msg; e.hidden = false; clearTimeout(errT); errT = setTimeout(() => e.hidden = true, 4000); }
 async function importUrl(raw) {
   const url = raw.trim(); if (!url) return;
-  $('f-url').value = url; $('spin').hidden = false; track.classList.add('busy'); closeEditor();
+  $('f-url').value = shortUrl(url); fitUrl(); $('spin').hidden = false; track.classList.add('busy'); closeEditor();
   try {
     const r = await fetch('/api/unfurl?url=' + encodeURIComponent(url));
     const d = await r.json();
@@ -433,11 +452,12 @@ async function importUrl(raw) {
       setImgUrl(await (await fetch(d.image)).blob());
     } else { state.img = null; setImgUrl(null); if (d.imageError) showErr(d.imageError + '. Drop one in by hand.'); }
     if (!d.title && !d.description) showErr('No Open Graph tags found on that page.');
+    $('f-url').value = shortUrl(d.url || url); fitUrl();
     try { history.replaceState(null, '', '?url=' + encodeURIComponent(d.url || url)); } catch {}
   } catch (e) { showErr(e.message); }
   $('spin').hidden = true; track.classList.remove('busy'); render();
 }
-$('urlform').addEventListener('submit', e => { e.preventDefault(); importUrl($('f-url').value); $('f-url').blur(); });
+$('urlform').addEventListener('submit', e => { e.preventDefault(); const v = $('f-url').value.trim(); $('f-url').blur(); if (v) importUrl(v); });
 $('f-url').addEventListener('paste', e => { const t = e.clipboardData?.getData('text') || ''; if (/^\s*(https?:\/\/)?[\w.-]+\.[a-z]{2,}/i.test(t)) { e.preventDefault(); importUrl(t); } });
 document.addEventListener('paste', e => {
   if (editing || e.target === $('f-url')) return;
@@ -552,6 +572,7 @@ $('dlall').addEventListener('click', () => save(`${slug()}-all.svg`, XML + all()
 
 render();
 mount();
+fitUrl();
 importUrl(new URLSearchParams(location.search).get('url') || 'https://www.apple.com/ipad-pro/');
 })();
 </script>

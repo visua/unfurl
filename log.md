@@ -2,6 +2,7 @@
 
 ## 2026-09-17
 
+- URL field rebuilt to the new design: a pill (0.5px hairline, #FBFAFA, full radius) with a line globe and the bare URL, hugging its content at the top of the page. Hover and focus draw a blue ring with box-shadow so the hairline stays put; tapping clears the field and asks for a URL, Escape or leaving it empty restores the previous one.
 - URL field accepts bare domains (e.g. `trumprx.gov`): plain text input with a URL keyboard instead of `type=url`, which made the browser reject anything without a scheme. The function already adds `https://`.
 - Phone touch fixes: pinch and double-tap zoom disabled, URL field 16px on touch devices so iOS does not zoom on focus, no long-press callouts or tap flash on the cards.
 - Removed the edge fade overlays entirely; side cards now run straight off the viewport.
